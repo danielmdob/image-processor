@@ -5,7 +5,7 @@ service:
 #org: your-org-name
 
 custom:
-  bucket_name: image-processor-photos
+  bucket_name:
   webpack:
     webpackConfig: ./webpack.config.js
     includeModules: true
@@ -25,12 +25,16 @@ provider:
     photosBucket:
       name: ${self:custom.bucket_name}
       accessControl: PublicReadWrite
+      publicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+
   iamRoleStatements:
     - Effect: "Allow"
       Action:
-        - "s3:ListBucket"
-        - "s3:GetObject"
-        - "s3:PutObject"
+        - "s3:*"
       Resource: "arn:aws:s3:::${self:custom.bucket_name}/*"
 
 functions:
@@ -42,8 +46,22 @@ functions:
           path: hello
 
   createThumbnails:
-    handler: handler.createThumbnails
+    handler: handler.resizeImages
     events:
       - s3:
           bucket: ${self:custom.bucket_name}
           event: s3:ObjectCreated:*
+
+  listObjects:
+    handler: handler.listResized
+    events:
+      - http:
+          method: get
+          path: resized
+
+  listOriginal:
+    handler: handler.listOriginal
+    events:
+      - http:
+          method: get
+          path: original
